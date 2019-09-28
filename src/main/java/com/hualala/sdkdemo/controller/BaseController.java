@@ -79,11 +79,4 @@ public class BaseController {
         return response;
     }
 
-    @RequestMapping(value = "/base")
-    public String base() {
-        log.debug("123");
-        log.info("123");
-        return "base";
-    }
-
 }
