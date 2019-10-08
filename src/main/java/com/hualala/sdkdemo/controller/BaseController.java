@@ -8,9 +8,11 @@ import com.hualala.api.utils.SignUtil;
 import com.hualala.sdkdemo.httpUtil.HttpClientUtil;
 import com.hualala.sdkdemo.model.BaseVo;
 import com.hualala.sdkdemo.model.PaperModel;
+import com.hualala.sdkdemo.model.ResponseModel;
 import com.hualala.sdkdemo.service.BaseService;
 import com.hualala.sdkdemo.utils.BaseUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.Consts;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.message.BasicNameValuePair;
@@ -41,19 +43,23 @@ public class BaseController {
     private BaseService baseService;
 
     //开发者appsecret
-    private static final String APP_SECRET = "UmvgvQWv";
+    private static final String APP_SECRET = "o8DYCPjc";
     //开发者appkey
     private static final Long APP_KEY = 1694L;
     //测试环境下单地址
-    private static final String ORDER_URL = "https://dohko-open-api.hualala.com/doc/getAllShop";
-    private static final Long GROUP_ID = 1155L;
-    private static final Long SHOP_ID = 76068673L;
+//    private static final String ORDER_URL = "https://dohko-open-api.hualala.com/doc/getAllShop";
+//    private static final String ORDER_URL = "https://www-openapi.hualala.com";
+    private static final String ORDER_URL = "https://www-openapi.hualala.com/doc/getFoodClassCategory";
+    //    private static final String ORDER_URL = "https://dohko-open-api.hualala.com";
+    //    private static final String ORDER_URL = "https://www-openapi.hualala.com";
+    private static final Long GROUP_ID = 262650L;
+    private static final Long SHOP_ID = 76528942L;
 
     @RequestMapping(value = "/main")
-    public String test() {
+    public ResponseModel test(BaseVo baseVo) {
         String response = "";
         try {
-            BaseVo baseVo = new BaseVo();
+//            BaseVo baseVo = new BaseVo();
             baseVo.setGroupID(GROUP_ID);
             baseVo.setShopID(SHOP_ID);
             //参与签名字段集合
@@ -92,8 +98,15 @@ public class BaseController {
         } catch (Exception e) {
             e.printStackTrace();
         }
+       /* if (StringUtils.isNotBlank(response)) {
+            response = response.substring(1);
+            response = response.substring(0, response.length() - 1);
 
-        return response;
+        }*/
+
+        return JSONObject.parseObject(response, new TypeReference<ResponseModel>() {
+        });
+
     }
 
 

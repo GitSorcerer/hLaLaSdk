@@ -3,6 +3,10 @@ package com.hualala.sdkdemo.httpUtil;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.hualala.api.model.SignModel;
+import com.hualala.api.utils.AESUtil;
+import com.hualala.api.utils.SignUtil;
+import com.hualala.sdkdemo.model.BaseVo;
 import com.hualala.sdkdemo.utils.BaseUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -22,6 +26,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -35,12 +40,72 @@ import static org.apache.http.impl.client.HttpClients.createDefault;
  */
 @Slf4j
 public class HttpClientUtil {
+    //开发者appsecret
+    private static final String APP_SECRET = "o8DYCPjc";
+    //开发者appkey
+    private static final Long APP_KEY = 1694L;
+    //测试环境下单地址
+//    private static final String ORDER_URL = "https://dohko-open-api.hualala.com/doc/getAllShop";
+//    private static final String ORDER_URL = "https://www-openapi.hualala.com";
+    private static final String ORDER_URL = "https://www-openapi.hualala.com";
+    //    private static final String ORDER_URL = "https://dohko-open-api.hualala.com";
+    //    private static final String ORDER_URL = "https://www-openapi.hualala.com";
+    private static final Long GROUP_ID = 262650L;
+    private static final Long SHOP_ID = 76528942L;
 
     private static final Log logger = LogFactory.getLog(HttpClientUtil.class);
     private static final int DEFAULT_TIMEOUT = 60000;
 
-    public static String senderPost(String url, Map<String, String> params, Long groupID, Long shopID, String traceID) throws IOException {
+    /**
+     * 请求参数封装
+     *
+     * @param baseVo
+     * @return
+     * @throws Exception
+     */
+    public static String parameterEncapsulation(BaseVo baseVo, String url) throws Exception {
+        baseVo.setGroupID(GROUP_ID);
+        //参与签名字段集合
+        Long timestamp = System.currentTimeMillis();
+        Map<String, Object> signMap = new HashMap<String, Object>();
+        signMap.put("timestamp", timestamp);
+        signMap.put("version", "2.0");
+        signMap.put("appKey", APP_KEY);
+        signMap.put("requestBody", baseVo);
 
+        //调用SDK方法getMapSign，生成公共参数signature的值，generatorStr：签名字段拼接，generatorSig：签名加密结果
+        SignModel signModel = null;
+        try {
+            signModel = SignUtil.getMapSign(signMap, APP_SECRET);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        //签名拼接字符串
+        assert signModel != null;
+        System.out.println("generatorStr : " + signModel.getGeneratorStr());
+
+        //签名加密生成字符串
+        System.out.println("generatorSig : " + signModel.getGeneratorSig());
+
+        //调用SDK方法将业务参数json进行AES加密，生成requestBody的值
+        String requestBody = AESUtil.AESEncode(APP_SECRET, JSONObject.toJSONString(baseVo));
+
+        //创建公共参数列表键值对map
+        Map<String, String> params = new HashMap<String, String>();
+        params.put("timestamp", timestamp.toString());
+        params.put("version", "2.0");
+        params.put("appKey", APP_KEY.toString());
+        params.put("requestBody", requestBody);
+        params.put("signature", signModel.getGeneratorSig());
+
+        //请求标识id
+        String traceID = UUID.randomUUID().toString();
+        //2.0接口groupID,shopID,traceID放入header中传输，groupID和traceID必传
+        return HttpClientUtil.senderPost(ORDER_URL + url, params, GROUP_ID, baseVo.getShopID(), traceID);
+    }
+
+    public static String senderPost(String url, Map<String, String> params, Long groupID, Long shopID, String traceID) throws IOException {
         CloseableHttpClient httpClient = createDefault();
         CloseableHttpResponse response = null;
         String result = "";
@@ -57,7 +122,9 @@ public class HttpClientUtil {
             httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded;charset=utf-8");
             //将groupID与shopID放入header中传输，2.0接口header中参数不参与签名,traceID必传
             httpPost.setHeader("groupID", groupID.toString());
-            httpPost.setHeader("shopID", shopID.toString());
+            if (shopID != null) {
+                httpPost.setHeader("shopID", shopID.toString());
+            }
             httpPost.setHeader("traceID", traceID);
 
             List<BasicNameValuePair> basicNameValuePairs = new ArrayList<BasicNameValuePair>();
